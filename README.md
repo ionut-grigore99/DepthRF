@@ -13,7 +13,7 @@ ______________________________________________________________________
   <a href="#training">Training</a> •
   <a href="#testing">Testing</a> •
   <a href="#pre-trained-models-and-results">Pretrained Models</a> •
-  <a href="#citation">Citation</a><br> •
+  <a href="#citation">Citation</a> •
   <a href="#contact">Contact</a><br> 
  </p>
 
@@ -128,7 +128,7 @@ $ bash src/data_prep/raw_data_downloader.sh /path/to/download/kitti_raw
 After downloading dataset, you should first copy color images, poses, and calibrations from the KITTI Raw to the KITTI Depth dataset.
 
 ```bash
-$ python -m src.data_prep.prepare_KITTI_DP --path_root_dp PATH_TO_Dataset --path_root_raw PATH_TO_KITTI_RAW
+$ python -m src.data_prep.prepare_KITTI --path_root_dp PATH_TO_Dataset --path_root_raw PATH_TO_KITTI_RAW
 ```
 
 ```
