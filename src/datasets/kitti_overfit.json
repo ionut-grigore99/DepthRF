@@ -1,0 +1,194 @@
+{
+    "train": [
+        {
+            "rgb": "train/2011_09_30_drive_0028_sync/image_03/data/0000001643.png",
+            "depth": "train/2011_09_30_drive_0028_sync/proj_depth/velodyne_raw/image_03/0000001643.png",
+            "gt": "train/2011_09_30_drive_0028_sync/proj_depth/groundtruth/image_03/0000001643.png",
+            "K": "train/2011_09_30_drive_0028_sync/calib_cam_to_cam.txt"
+        },
+        {
+            "rgb": "train/2011_09_30_drive_0028_sync/image_03/data/0000000674.png",
+            "depth": "train/2011_09_30_drive_0028_sync/proj_depth/velodyne_raw/image_03/0000000674.png",
+            "gt": "train/2011_09_30_drive_0028_sync/proj_depth/groundtruth/image_03/0000000674.png",
+            "K": "train/2011_09_30_drive_0028_sync/calib_cam_to_cam.txt"
+        },
+        {
+            "rgb": "train/2011_09_30_drive_0018_sync/image_02/data/0000002578.png",
+            "depth": "train/2011_09_30_drive_0018_sync/proj_depth/velodyne_raw/image_02/0000002578.png",
+            "gt": "train/2011_09_30_drive_0018_sync/proj_depth/groundtruth/image_02/0000002578.png",
+            "K": "train/2011_09_30_drive_0018_sync/calib_cam_to_cam.txt"
+        },
+        {
+            "rgb": "train/2011_10_03_drive_0034_sync/image_03/data/0000000289.png",
+            "depth": "train/2011_10_03_drive_0034_sync/proj_depth/velodyne_raw/image_03/0000000289.png",
+            "gt": "train/2011_10_03_drive_0034_sync/proj_depth/groundtruth/image_03/0000000289.png",
+            "K": "train/2011_10_03_drive_0034_sync/calib_cam_to_cam.txt"
+        },
+        {
+            "rgb": "train/2011_10_03_drive_0034_sync/image_03/data/0000002408.png",
+            "depth": "train/2011_10_03_drive_0034_sync/proj_depth/velodyne_raw/image_03/0000002408.png",
+            "gt": "train/2011_10_03_drive_0034_sync/proj_depth/groundtruth/image_03/0000002408.png",
+            "K": "train/2011_10_03_drive_0034_sync/calib_cam_to_cam.txt"
+        },
+        {
+            "rgb": "train/2011_09_28_drive_0204_sync/image_03/data/0000000041.png",
+            "depth": "train/2011_09_28_drive_0204_sync/proj_depth/velodyne_raw/image_03/0000000041.png",
+            "gt": "train/2011_09_28_drive_0204_sync/proj_depth/groundtruth/image_03/0000000041.png",
+            "K": "train/2011_09_28_drive_0204_sync/calib_cam_to_cam.txt"
+        },
+        {
+            "rgb": "train/2011_09_26_drive_0096_sync/image_02/data/0000000366.png",
+            "depth": "train/2011_09_26_drive_0096_sync/proj_depth/velodyne_raw/image_02/0000000366.png",
+            "gt": "train/2011_09_26_drive_0096_sync/proj_depth/groundtruth/image_02/0000000366.png",
+            "K": "train/2011_09_26_drive_0096_sync/calib_cam_to_cam.txt"
+        },
+        {
+            "rgb": "train/2011_09_30_drive_0033_sync/image_02/data/0000001367.png",
+            "depth": "train/2011_09_30_drive_0033_sync/proj_depth/velodyne_raw/image_02/0000001367.png",
+            "gt": "train/2011_09_30_drive_0033_sync/proj_depth/groundtruth/image_02/0000001367.png",
+            "K": "train/2011_09_30_drive_0033_sync/calib_cam_to_cam.txt"
+        },
+        {
+            "rgb": "train/2011_10_03_drive_0027_sync/image_03/data/0000003708.png",
+            "depth": "train/2011_10_03_drive_0027_sync/proj_depth/velodyne_raw/image_03/0000003708.png",
+            "gt": "train/2011_10_03_drive_0027_sync/proj_depth/groundtruth/image_03/0000003708.png",
+            "K": "train/2011_10_03_drive_0027_sync/calib_cam_to_cam.txt"
+        },
+        {
+            "rgb": "train/2011_10_03_drive_0027_sync/image_02/data/0000002265.png",
+            "depth": "train/2011_10_03_drive_0027_sync/proj_depth/velodyne_raw/image_02/0000002265.png",
+            "gt": "train/2011_10_03_drive_0027_sync/proj_depth/groundtruth/image_02/0000002265.png",
+            "K": "train/2011_10_03_drive_0027_sync/calib_cam_to_cam.txt"
+        },
+        {
+            "rgb": "train/2011_09_26_drive_0057_sync/image_03/data/0000000176.png",
+            "depth": "train/2011_09_26_drive_0057_sync/proj_depth/velodyne_raw/image_03/0000000176.png",
+            "gt": "train/2011_09_26_drive_0057_sync/proj_depth/groundtruth/image_03/0000000176.png",
+            "K": "train/2011_09_26_drive_0057_sync/calib_cam_to_cam.txt"
+        },
+        {
+            "rgb": "train/2011_09_28_drive_0016_sync/image_02/data/0000000094.png",
+            "depth": "train/2011_09_28_drive_0016_sync/proj_depth/velodyne_raw/image_02/0000000094.png",
+            "gt": "train/2011_09_28_drive_0016_sync/proj_depth/groundtruth/image_02/0000000094.png",
+            "K": "train/2011_09_28_drive_0016_sync/calib_cam_to_cam.txt"
+        },
+        {
+            "rgb": "train/2011_09_26_drive_0035_sync/image_02/data/0000000047.png",
+            "depth": "train/2011_09_26_drive_0035_sync/proj_depth/velodyne_raw/image_02/0000000047.png",
+            "gt": "train/2011_09_26_drive_0035_sync/proj_depth/groundtruth/image_02/0000000047.png",
+            "K": "train/2011_09_26_drive_0035_sync/calib_cam_to_cam.txt"
+        },
+        {
+            "rgb": "train/2011_09_30_drive_0018_sync/image_03/data/0000000764.png",
+            "depth": "train/2011_09_30_drive_0018_sync/proj_depth/velodyne_raw/image_03/0000000764.png",
+            "gt": "train/2011_09_30_drive_0018_sync/proj_depth/groundtruth/image_03/0000000764.png",
+            "K": "train/2011_09_30_drive_0018_sync/calib_cam_to_cam.txt"
+        },
+        {
+            "rgb": "train/2011_09_28_drive_0078_sync/image_03/data/0000000022.png",
+            "depth": "train/2011_09_28_drive_0078_sync/proj_depth/velodyne_raw/image_03/0000000022.png",
+            "gt": "train/2011_09_28_drive_0078_sync/proj_depth/groundtruth/image_03/0000000022.png",
+            "K": "train/2011_09_28_drive_0078_sync/calib_cam_to_cam.txt"
+        }
+ ],
+    "val": [
+        {
+            "rgb": "val/2011_09_26_drive_0002_sync/image_02/data/0000000005.png",
+            "depth": "val/2011_09_26_drive_0002_sync/proj_depth/velodyne_raw/image_02/0000000005.png",
+            "gt": "val/2011_09_26_drive_0002_sync/proj_depth/groundtruth/image_02/0000000005.png",
+            "K": "val/2011_09_26_drive_0002_sync/calib_cam_to_cam.txt"
+        },
+        {
+            "rgb": "val/2011_09_26_drive_0002_sync/image_02/data/0000000006.png",
+            "depth": "val/2011_09_26_drive_0002_sync/proj_depth/velodyne_raw/image_02/0000000006.png",
+            "gt": "val/2011_09_26_drive_0002_sync/proj_depth/groundtruth/image_02/0000000006.png",
+            "K": "val/2011_09_26_drive_0002_sync/calib_cam_to_cam.txt"
+        },
+        {
+            "rgb": "val/2011_09_26_drive_0002_sync/image_02/data/0000000007.png",
+            "depth": "val/2011_09_26_drive_0002_sync/proj_depth/velodyne_raw/image_02/0000000007.png",
+            "gt": "val/2011_09_26_drive_0002_sync/proj_depth/groundtruth/image_02/0000000007.png",
+            "K": "val/2011_09_26_drive_0002_sync/calib_cam_to_cam.txt"
+        },
+        {
+            "rgb": "val/2011_09_26_drive_0002_sync/image_02/data/0000000008.png",
+            "depth": "val/2011_09_26_drive_0002_sync/proj_depth/velodyne_raw/image_02/0000000008.png",
+            "gt": "val/2011_09_26_drive_0002_sync/proj_depth/groundtruth/image_02/0000000008.png",
+            "K": "val/2011_09_26_drive_0002_sync/calib_cam_to_cam.txt"
+        },
+        {
+            "rgb": "val/2011_09_26_drive_0002_sync/image_02/data/0000000009.png",
+            "depth": "val/2011_09_26_drive_0002_sync/proj_depth/velodyne_raw/image_02/0000000009.png",
+            "gt": "val/2011_09_26_drive_0002_sync/proj_depth/groundtruth/image_02/0000000009.png",
+            "K": "val/2011_09_26_drive_0002_sync/calib_cam_to_cam.txt"
+        },
+        {
+            "rgb": "val/2011_09_26_drive_0002_sync/image_02/data/0000000010.png",
+            "depth": "val/2011_09_26_drive_0002_sync/proj_depth/velodyne_raw/image_02/0000000010.png",
+            "gt": "val/2011_09_26_drive_0002_sync/proj_depth/groundtruth/image_02/0000000010.png",
+            "K": "val/2011_09_26_drive_0002_sync/calib_cam_to_cam.txt"
+        },
+        {
+            "rgb": "val/2011_09_26_drive_0002_sync/image_02/data/0000000011.png",
+            "depth": "val/2011_09_26_drive_0002_sync/proj_depth/velodyne_raw/image_02/0000000011.png",
+            "gt": "val/2011_09_26_drive_0002_sync/proj_depth/groundtruth/image_02/0000000011.png",
+            "K": "val/2011_09_26_drive_0002_sync/calib_cam_to_cam.txt"
+        },
+        {
+            "rgb": "val/2011_09_26_drive_0002_sync/image_02/data/0000000012.png",
+            "depth": "val/2011_09_26_drive_0002_sync/proj_depth/velodyne_raw/image_02/0000000012.png",
+            "gt": "val/2011_09_26_drive_0002_sync/proj_depth/groundtruth/image_02/0000000012.png",
+            "K": "val/2011_09_26_drive_0002_sync/calib_cam_to_cam.txt"
+        },
+        {
+            "rgb": "val/2011_09_26_drive_0002_sync/image_02/data/0000000013.png",
+            "depth": "val/2011_09_26_drive_0002_sync/proj_depth/velodyne_raw/image_02/0000000013.png",
+            "gt": "val/2011_09_26_drive_0002_sync/proj_depth/groundtruth/image_02/0000000013.png",
+            "K": "val/2011_09_26_drive_0002_sync/calib_cam_to_cam.txt"
+        }
+   ],
+    "test": [
+        {
+            "rgb": "depth_selection/val_selection_cropped/image/2011_09_26_drive_0002_sync_image_0000000005_image_02.png",
+            "depth": "depth_selection/val_selection_cropped/velodyne_raw/2011_09_26_drive_0002_sync_velodyne_raw_0000000005_image_02.png",
+            "gt": "depth_selection/val_selection_cropped/groundtruth_depth/2011_09_26_drive_0002_sync_groundtruth_depth_0000000005_image_02.png",
+            "K": "depth_selection/val_selection_cropped/intrinsics/2011_09_26_drive_0002_sync_image_0000000005_image_02.txt"
+        },
+        {
+            "rgb": "depth_selection/val_selection_cropped/image/2011_09_26_drive_0002_sync_image_0000000008_image_03.png",
+            "depth": "depth_selection/val_selection_cropped/velodyne_raw/2011_09_26_drive_0002_sync_velodyne_raw_0000000008_image_03.png",
+            "gt": "depth_selection/val_selection_cropped/groundtruth_depth/2011_09_26_drive_0002_sync_groundtruth_depth_0000000008_image_03.png",
+            "K": "depth_selection/val_selection_cropped/intrinsics/2011_09_26_drive_0002_sync_image_0000000008_image_03.txt"
+        },
+        {
+            "rgb": "depth_selection/val_selection_cropped/image/2011_09_26_drive_0002_sync_image_0000000011_image_02.png",
+            "depth": "depth_selection/val_selection_cropped/velodyne_raw/2011_09_26_drive_0002_sync_velodyne_raw_0000000011_image_02.png",
+            "gt": "depth_selection/val_selection_cropped/groundtruth_depth/2011_09_26_drive_0002_sync_groundtruth_depth_0000000011_image_02.png",
+            "K": "depth_selection/val_selection_cropped/intrinsics/2011_09_26_drive_0002_sync_image_0000000011_image_02.txt"
+        },
+        {
+            "rgb": "depth_selection/val_selection_cropped/image/2011_09_26_drive_0002_sync_image_0000000014_image_03.png",
+            "depth": "depth_selection/val_selection_cropped/velodyne_raw/2011_09_26_drive_0002_sync_velodyne_raw_0000000014_image_03.png",
+            "gt": "depth_selection/val_selection_cropped/groundtruth_depth/2011_09_26_drive_0002_sync_groundtruth_depth_0000000014_image_03.png",
+            "K": "depth_selection/val_selection_cropped/intrinsics/2011_09_26_drive_0002_sync_image_0000000014_image_03.txt"
+        },
+        {
+            "rgb": "depth_selection/val_selection_cropped/image/2011_09_26_drive_0002_sync_image_0000000017_image_02.png",
+            "depth": "depth_selection/val_selection_cropped/velodyne_raw/2011_09_26_drive_0002_sync_velodyne_raw_0000000017_image_02.png",
+            "gt": "depth_selection/val_selection_cropped/groundtruth_depth/2011_09_26_drive_0002_sync_groundtruth_depth_0000000017_image_02.png",
+            "K": "depth_selection/val_selection_cropped/intrinsics/2011_09_26_drive_0002_sync_image_0000000017_image_02.txt"
+        },
+        {
+            "rgb": "depth_selection/val_selection_cropped/image/2011_09_26_drive_0002_sync_image_0000000020_image_03.png",
+            "depth": "depth_selection/val_selection_cropped/velodyne_raw/2011_09_26_drive_0002_sync_velodyne_raw_0000000020_image_03.png",
+            "gt": "depth_selection/val_selection_cropped/groundtruth_depth/2011_09_26_drive_0002_sync_groundtruth_depth_0000000020_image_03.png",
+            "K": "depth_selection/val_selection_cropped/intrinsics/2011_09_26_drive_0002_sync_image_0000000020_image_03.txt"
+        },
+        {
+            "rgb": "depth_selection/val_selection_cropped/image/2011_09_26_drive_0002_sync_image_0000000023_image_02.png",
+            "depth": "depth_selection/val_selection_cropped/velodyne_raw/2011_09_26_drive_0002_sync_velodyne_raw_0000000023_image_02.png",
+            "gt": "depth_selection/val_selection_cropped/groundtruth_depth/2011_09_26_drive_0002_sync_groundtruth_depth_0000000023_image_02.png",
+            "K": "depth_selection/val_selection_cropped/intrinsics/2011_09_26_drive_0002_sync_image_0000000023_image_02.txt"
+        }
+    ]
+}

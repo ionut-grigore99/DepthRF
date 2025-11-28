@@ -3,6 +3,8 @@ import numpy as np
 import numba 
 import collections
 import cv2
+import shutil
+import os
 from numba import prange
 import copy
 from mmcv.cnn import ConvModule, build_conv_layer, build_norm_layer, build_upsample_layer
@@ -12,6 +14,19 @@ from torch import nn
 import torch.nn.functional as F
 
 DEPTH_TRANSFORM = Registry('depth_transforms', )
+
+def backup_source_code(backup_directory):
+    ignore_hidden = shutil.ignore_patterns(".git*", "*pycache*", "*build", "*.fuse*", "*_drive_*", "*weights*")
+
+    if os.path.exists(backup_directory):
+        shutil.rmtree(backup_directory)
+
+    # Get the src directory (parent of utils.py)
+    src_dir = os.path.dirname(os.path.abspath(__file__))
+    
+    # Copy only src/ folder to backup location
+    shutil.copytree(src_dir, backup_directory, ignore=ignore_hidden)
+    os.system("chmod -R g+w {}".format(backup_directory))
 
 class ToNumpy:
     def __call__(self, sample):

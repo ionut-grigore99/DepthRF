@@ -2,10 +2,10 @@
 dataset: 'kitti'  # 'kitti' or 'nyu'
 kitti:
  data_dir: '/data/DepthRF/kitti/kitti_dp'
- split_json: '/home/ionut/DepthRF/src/datasets/kitti.json'
+ split_json: '/home/ionut/DepthRF/src/datasets/kitti_overfit.json' # kitti.json or kitti_overfit.json for overfitting test 
  num_sparse_points: 0
- patch_height: 352
- patch_width: 1216
+ patch_height: 256 #352
+ patch_width: 256 #1216
  top_crop: 0
  test_crop: False
 nyu:
@@ -17,17 +17,26 @@ nyu:
  crop_size: (228, 304)
 
 #training
-epochs: 20
+batch_size: 4
+epochs: 30
+lr: 0.001
+weight_decay: 0.0
+betas: [0.9, 0.999] # Adam optimizer betas
+epsilon: 1.0e-8 # Adam optimizer epsilon
+lr_decay: 10, 15, 20 # epochs where lr decays
+lr_gamma: 1.0, 0.2, 0.04 # lr decay factors
+warm_up: True # use learning rate warm up
+loss: '1.0*L1+1.0*L2+1.0*DDIM'
 
 # misc
 device: 'cuda'
+num_workers: 0
 backbone_weights: '/home/ionut/DepthRF/src/weights/swin_large_patch4_window7_224_22k.pth'
 model_weights: '/home/ionut/DepthRF/src/weights/swin_model_00035.pt' 
-num_workers: 0
-save_inference_images: True
-max_depth: 80.0 
-num_summary: 4
-save_raw_npdepth: False
+resume_checkpoint: null
+save_dir: '/home/ionut/DepthRF/experiments'
+max_depth: 88.0 # for kitti use 80.0 or 88.0 
 inference_steps: 20
 num_train_timesteps: 1000
-save_result_only: False
+save_full_model: True
+num_summary: 4 # number of images to visualize in TensorBoard for train/val

@@ -84,7 +84,7 @@ We used two datasets for training and evaluation.
 
 #### NYU Depth V2 (NYUv2)
 
-We used preprocessed NYUv2 HDF5 dataset provided by [Fangchang Ma](https://github.com/fangchangma/sparse-to-dense).
+We used preprocessed NYUv2 HDF5 dataset.
 
 ```bash
 $ cd PATH_TO_DOWNLOAD
@@ -128,7 +128,7 @@ $ bash src/data_prep/raw_data_downloader.sh /path/to/download/kitti_raw
 After downloading dataset, you should first copy color images, poses, and calibrations from the KITTI Raw to the KITTI Depth dataset.
 
 ```bash
-$ python -m src.data_prep.prepare_KITTI_DP.py --path_root_dp PATH_TO_Dataset --path_root_raw PATH_TO_KITTI_RAW
+$ python -m src.data_prep.prepare_KITTI_DP --path_root_dp PATH_TO_Dataset --path_root_raw PATH_TO_KITTI_RAW
 ```
 
 ```
@@ -167,10 +167,10 @@ After preparing the dataset, you should generate a json file containing paths to
 
 ```bash
 # For Train / Validation
-$ python -m src.data_prep.generate_json_KITTI_DP.py --path_root PATH_TO_KITTI
+$ python -m src.data_prep.generate_json_KITTI --path_root PATH_TO_KITTI
 
 # For Online Evaluation Data
-$ python -m src.data_prep.generate_json_KITTI_DP.py --path_root PATH_TO_KITTI --name_out kitti_dp_test.json --test_data
+$ python -m src.data_prep.generate_json_KITTI --path_root PATH_TO_KITTI --name_out kitti_dp_test.json --test_data
 ```
 
 
@@ -185,7 +185,7 @@ Please refer to the config.yaml for more training options.
 During the training, tensorboard logs are saved under the experiments directory. To run the tensorboard:
 
 ```bash
-$ cd DepthRF/experiments
+$ cd DepthRF/experiments/train
 $ tensorboard --logdir=. --bind_all
 ```
 The tensorboard visualization includes metric curves and depth map visualization as shown below:

@@ -170,7 +170,7 @@ class KITTI(Dataset):
             K[3] = K[3] - h_start
 
             rgb = TF.to_tensor(rgb)
-            rgb = TF.normalize(rgb, (0.485, 0.456, 0.406), (0.229, 0.224, 0.225), inplace=True)
+            rgb = TF.normalize(rgb, (0.485, 0.456, 0.406), (0.229, 0.224, 0.225), inplace=True) # ImageNet normalization values: https://stackoverflow.com/questions/58151507/why-pytorch-officially-use-mean-0-485-0-456-0-406-and-std-0-229-0-224-0-2
 
             depth = TF.to_tensor(np.array(depth))
             depth = depth / _scale
@@ -202,7 +202,7 @@ class KITTI(Dataset):
             K[3] = K[3] - h_start
 
             rgb = TF.to_tensor(rgb)
-            rgb = TF.normalize(rgb, (0.485, 0.456, 0.406), (0.229, 0.224, 0.225), inplace=True)
+            rgb = TF.normalize(rgb, (0.485, 0.456, 0.406), (0.229, 0.224, 0.225), inplace=True) # ImageNet normalization values: https://stackoverflow.com/questions/58151507/why-pytorch-officially-use-mean-0-485-0-456-0-406-and-std-0-229-0-224-0-2
 
             depth = TF.to_tensor(np.array(depth))
 
@@ -216,7 +216,7 @@ class KITTI(Dataset):
                 K[3] = K[3] - self.top_crop
 
             rgb = TF.to_tensor(rgb)
-            rgb = TF.normalize(rgb, (0.485, 0.456, 0.406), (0.229, 0.224, 0.225), inplace=True)
+            rgb = TF.normalize(rgb, (0.485, 0.456, 0.406), (0.229, 0.224, 0.225), inplace=True) # ImageNet normalization values: https://stackoverflow.com/questions/58151507/why-pytorch-officially-use-mean-0-485-0-456-0-406-and-std-0-229-0-224-0-2
 
             depth = TF.to_tensor(np.array(depth))
 

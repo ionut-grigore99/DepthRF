@@ -75,9 +75,10 @@ class DiffusionDepth(nn.Module):
             weights_path (str): Path to the pre-trained weights file.
         """
         assert os.path.exists(weights_path), "file not found: {}".format(weights_path)
+        print(f"loading checkpoint from local path: {weights_path}")
 
         checkpoint = torch.load(weights_path)
-        key_m, key_u = self.load_state_dict(checkpoint['net'], strict=False)
+        key_m, key_u = self.load_state_dict(checkpoint['net'], strict=True)
 
         if key_u:
             print('Unexpected keys :')
@@ -88,6 +89,7 @@ class DiffusionDepth(nn.Module):
             print(key_m)
             raise KeyError
 
+        print(f"complete loading with parameters pretrain from {weights_path}")
 
 if __name__ == '__main__':
     from src.conf import Config

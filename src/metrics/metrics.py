@@ -1,13 +1,11 @@
 import torch
 
 class DepthRF_Metric():
-    def __init__(self, conf):
-        self.conf = conf
+    def __init__(self):
         self.t_valid = 0.0001
-
         self.metric_name = ['RMSE', 'MAE', 'iRMSE', 'iMAE', 'REL', 'D^1', 'D^2', 'D^3']
 
-    def evaluate(self, sample, output, mode):
+    def evaluate(self, sample, output):
         with torch.no_grad():
             pred = output['pred'].detach()
             gt = sample['depth_gt'].detach()

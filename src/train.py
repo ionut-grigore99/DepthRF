@@ -5,12 +5,23 @@ import json
 import numpy as np
 from tqdm import tqdm
 import lovely_tensors as lt
+import yaml
+from pathlib import Path
+from datetime import datetime
+import matplotlib.pyplot as plt
 
 import torch
 from torch import nn
 from torch.utils.data import DataLoader
+from torch.utils.tensorboard import SummaryWriter
 
 from src.conf import Config
+from src.models.diffusion_depth_model import DiffusionDepth  
+from src.datasets.nyu import NYU
+from src.datasets.kitti import KITTI
+from src.metrics.metrics import DepthRF_Metric
+from src.losses.loss import compute_depth_loss
+from src.utils import backup_source_code
 
 
 # Minimize randomness
@@ -21,265 +32,289 @@ torch.cuda.manual_seed_all(7240)
 torch.backends.cudnn.deterministic = True
 torch.backends.cudnn.benchmark = False
 
+# Get colormap for depth visualization
+cm = plt.get_cmap('plasma') # 'plasma' or 'jet'
+
+def visualize_batch_to_tensorboard(writer, sample, output, global_step, mode, conf):
+    """Visualize a batch of predictions in TensorBoard."""
+
+    # ImageNet normalization constants
+    img_mean = torch.tensor((0.485, 0.456, 0.406)).view(1, 3, 1, 1)
+    img_std = torch.tensor((0.229, 0.224, 0.225)).view(1, 3, 1, 1)
+    
+    with torch.no_grad():
+        # Un-normalize RGB
+        rgb = sample['rgb'].detach().clone()
+        rgb.mul_(img_std.type_as(rgb)).add_(img_mean.type_as(rgb))
+        rgb = rgb.cpu().numpy()
+        
+        # Get depth maps
+        depth_sparse = sample['depth_sparse'].detach().cpu().numpy()
+        depth_gt = sample['depth_gt'].detach().cpu().numpy()
+        pred = output['pred'].detach().cpu().numpy()
+        
+        # Limit number of images to visualize
+        num_summary = min(rgb.shape[0], conf['num_summary'])
+        
+        rgb = rgb[0:num_summary, :, :, :]
+        depth_sparse = depth_sparse[0:num_summary, :, :, :]
+        depth_gt = depth_gt[0:num_summary, :, :, :]
+        pred = pred[0:num_summary, :, :, :]
+        
+        # Clip values
+        max_depth = conf['max_depth']
+        rgb = np.clip(rgb, a_min=0, a_max=1.0)
+        depth_sparse = np.clip(depth_sparse, a_min=0, a_max=max_depth)
+        depth_gt = np.clip(depth_gt, a_min=0, a_max=max_depth)
+        pred = np.clip(pred, a_min=0, a_max=max_depth)
+        
+        list_img = []
+        
+        for b in range(num_summary):
+            # Extract single sample [C, H, W] or [H, W]
+            rgb_tmp = rgb[b, :, :, :]  # [3, H, W]
+            depth_sparse_tmp = depth_sparse[b, 0, :, :]   # [H, W]
+            depth_gt_tmp = depth_gt[b, 0, :, :]     # [H, W]
+            pred_tmp = pred[b, 0, :, :] # [H, W]
+            
+            # Normalize depth to [0, 255] for colormap
+            depth_sparse_tmp = 255.0 * depth_sparse_tmp / max_depth
+            depth_gt_tmp = 255.0 * depth_gt_tmp / max_depth
+            pred_tmp = 255.0 * pred_tmp / max_depth
+            
+            # Apply colormap (returns RGBA, we take RGB only)
+            depth_sparse_tmp = cm(depth_sparse_tmp.astype('uint8'))[:, :, :3]    # [H, W, 3]
+            depth_gt_tmp = cm(depth_gt_tmp.astype('uint8'))[:, :, :3]      # [H, W, 3]
+            pred_tmp = cm(pred_tmp.astype('uint8'))[:, :, :3]  # [H, W, 3]
+
+            depth_sparse_tmp = np.transpose(depth_sparse_tmp, (2, 0, 1))
+            depth_gt_tmp = np.transpose(depth_gt_tmp, (2, 0, 1))
+            pred_tmp = np.transpose(pred_tmp, (2, 0, 1))
+
+            # Concatenate vertically: RGB | Sparse Depth | Prediction | Ground Truth Depth  
+            img = np.concatenate((rgb_tmp, depth_sparse_tmp, pred_tmp, depth_gt_tmp), axis=1)
+
+            list_img.append(img)
+        
+        img_total = np.concatenate(list_img, axis=2)
+        img_total = torch.from_numpy(img_total)
+        
+        writer.add_image(f'{mode}/Visualization', img_total, global_step)
  
 def train(conf):
-    # Initialize workers
-    # NOTE : the worker with gpu=0 will do logging
-    dist.init_process_group(backend='nccl', init_method='env://', world_size=args.num_gpus, rank=gpu)
-    torch.cuda.set_device(gpu)
-
     # Prepare dataset
-    data = get_data(args)
-
-    data_train = data(args, 'train')
-    data_val = data(args, 'val')
-    data_test = data(args, 'test')
-
-    sampler_train = DistributedSampler(data_train, num_replicas=args.num_gpus, rank=gpu)
-    sampler_val = DistributedSampler(data_val, num_replicas=args.num_gpus, rank=gpu)
-
-    batch_size = args.batch_size // args.num_gpus
-
-    loader_train = DataLoader(dataset=data_train, batch_size=batch_size, shuffle=False, num_workers=args.num_threads, pin_memory=True, sampler=sampler_train, drop_last=True)
-    loader_val = DataLoader(dataset=data_val, batch_size=1, shuffle=False, num_workers=args.num_threads, pin_memory=True, sampler=sampler_val, drop_last=False)
-    loader_test = DataLoader(dataset=data_test, batch_size=1, shuffle=False, num_workers=args.num_threads)
-
-    # Network
-    model = get_model(args)
-    net = model(args)
-    net.cuda(gpu)
-
-    if gpu == 0:
-        if args.pretrain is not None:
-            assert os.path.exists(args.pretrain), "file not found: {}".format(args.pretrain)
-
-            checkpoint = torch.load(args.pretrain)
-            net.load_state_dict(checkpoint['net'])
-
-            print('Load network parameters from : {}'.format(args.pretrain))
-
-    # Loss
-    loss = get_loss(args)
-    loss = loss(args)
-    loss.cuda(gpu)
+    if conf['dataset'] == 'kitti':
+        train_dataset = KITTI(conf['kitti']['data_dir'], conf['kitti']['split_json'], use_aug=True, mode='train', num_sparse_points=conf['kitti']['num_sparse_points'], test_crop=False, top_crop=conf['kitti']['top_crop'], patch_height=conf['kitti']['patch_height'], patch_width=conf['kitti']['patch_width'])
+        val_dataset = KITTI(conf['kitti']['data_dir'], conf['kitti']['split_json'], use_aug=False, mode='val', num_sparse_points=conf['kitti']['num_sparse_points'], test_crop=False, top_crop=conf['kitti']['top_crop'], patch_height=conf['kitti']['patch_height'], patch_width=conf['kitti']['patch_width'])
+        test_dataset = KITTI(conf['kitti']['data_dir'], conf['kitti']['split_json'], use_aug=False, mode='test', num_sparse_points=0, test_crop=conf['kitti']['test_crop'], top_crop=conf['kitti']['top_crop'], patch_height=conf['kitti']['patch_height'], patch_width=conf['kitti']['patch_width'])
+    elif conf['dataset'] == 'nyu':
+        train_dataset = NYU(conf['nyu']['data_dir'], conf['nyu']['split_json'], use_aug=True, mode='train', num_sparse_points=conf['nyu']['num_sparse_points'])
+        val_dataset = NYU(conf['nyu']['data_dir'], conf['nyu']['split_json'], use_aug=False, mode='val', num_sparse_points=conf['nyu']['num_sparse_points'])
+        test_dataset = NYU(conf['nyu']['data_dir'], conf['nyu']['split_json'], use_aug=False, mode='test', num_sparse_points=0)
+    else:
+        raise ValueError(f"Unknown dataset: {conf['dataset']}")
+    train_dataloader = DataLoader(dataset=train_dataset, batch_size=conf['batch_size'], shuffle=True, num_workers=conf['num_workers'], pin_memory=True, drop_last=True)
+    val_dataloader = DataLoader(dataset=val_dataset, batch_size=1, shuffle=False, num_workers=conf['num_workers'], pin_memory=True, drop_last=False)
+    test_dataloader = DataLoader(dataset=test_dataset, batch_size=1, shuffle=False, num_workers=conf['num_workers'])
+    
+    # Get Model
+    model = DiffusionDepth(conf)
+    model = model.to(conf['device'])
 
     # Optimizer
-    if args.split_backbone_training:
-        optimizer, scheduler = utility.make_optimizer_scheduler_split(args, net)
-    else:
-        optimizer, scheduler = utility.make_optimizer_scheduler(args, net)
+    optimizer = torch.optim.Adam(model.parameters(), lr=conf['lr'], betas=conf['betas'], eps=conf['epsilon'], weight_decay=conf['weight_decay'])
+    
+    # Scheduler
+    lr_decay = list(map(int, conf["lr_decay"].split(",")))
+    lr_gamma = list(map(float, conf["lr_gamma"].split(",")))
+    assert len(lr_decay) == len(lr_gamma), 'lr_decay and lr_gamma must have same length'
+    scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, lambda epoch: next((g for d, g in zip(lr_decay, lr_gamma) if epoch < d), lr_gamma[-1]))
 
-    net = apex.parallel.convert_syncbn_model(net)
-    net, optimizer = amp.initialize(net, optimizer, opt_level=args.opt_level, verbosity=0)
-
-    if gpu == 0:
-        if args.pretrain is not None:
-            if args.resume:
-                try:
-                    optimizer.load_state_dict(checkpoint['optimizer'])
-                    scheduler.load_state_dict(checkpoint['scheduler'])
-                    amp.load_state_dict(checkpoint['amp'])
-
-                    print('Resume optimizer, scheduler and amp from : {}'.format(args.pretrain))
-                except KeyError:
-                    print('State dicts for resume are not saved. Use --save_full argument')
-
-            del checkpoint
-
-    net = DDP(net)
-
-    metric = get_metric(args)
-    metric = metric(args)
-    summary = get_summary(args)
-
-    if gpu == 0:
-        utility.backup_source_code(args.save_dir + '/code')
+    # Resume from checkpoint if specified
+    if conf['resume_checkpoint'] is not None:
+        checkpoint = torch.load(conf['resume_checkpoint'])
+        key_m, key_u = self.load_state_dict(checkpoint['net'], strict=True)
+        if key_u:
+            print('Unexpected keys :')
+            print(key_u)
+        if key_m:
+            print('Missing keys :')
+            print(key_m)
+            raise KeyError
         try:
-            os.makedirs(args.save_dir, exist_ok=True)
-            os.makedirs(args.save_dir + '/train', exist_ok=True)
-            os.makedirs(args.save_dir + '/val', exist_ok=True)
-            os.makedirs(args.save_dir + '/test', exist_ok=True)
-        except OSError:
-            pass
+            optimizer.load_state_dict(checkpoint['optimizer'])
+            scheduler.load_state_dict(checkpoint['scheduler'])
+            print('Resume optimizer and scheduler from : {}'.format(conf['resume_checkpoint']))
+        except KeyError:
+            print('State dicts for resume are not saved. Use --save_full argument')
+        del checkpoint
 
-    if gpu == 0:
-        writer_train = summary(args.save_dir, 'train', args, loss.loss_name, metric.metric_name)
-        writer_val = summary(args.save_dir, 'val', args, loss.loss_name, metric.metric_name)
-        writer_test = summary(args.save_dir, 'test', args, loss.loss_name, metric.metric_name)
+    # Prepare metrics and loss names
+    metrics = DepthRF_Metric()
+    loss_names = []
+    for loss_item in conf['loss'].split('+'):
+        _, loss_type = loss_item.split('*')
+        loss_names.append(loss_type.strip().upper())
+    loss_names.append('Total')
+    
+    # Prepare logging and TensorBoard ---
+    timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+    logdir = Path(conf['save_dir']) / 'train' / timestamp
+    logdir.mkdir(parents=True, exist_ok=True)
+    with open(logdir / "config.yaml", "w") as config_yaml:
+        yaml.dump(conf, config_yaml, default_flow_style=False, sort_keys=False)
 
-        with open(args.save_dir + '/args.json', 'w') as args_json:
-            json.dump(args.__dict__, args_json, indent=4)
+    # Save source code as a sanity check
+    backup_source_code(logdir / 'backup_code')
+    writer = SummaryWriter(log_dir=logdir)
+    with open(logdir / "config.yaml", "r") as config_yaml:
+        config_text = config_yaml.read()
+        writer.add_text("config", f"```yaml\n{config_text}\n```", global_step=0)
 
-    if args.warm_up:
+    # Prepare warm-up for learning rate if specified
+    if conf['warm_up']:
         warm_up_cnt = 0.0
-        warm_up_max_cnt = len(loader_train)+1.0
+        warm_up_max_cnt = len(train_dataloader)+1.0
 
-    for epoch in range(1, args.epochs+1):
-        # Train
-        net.train()
+    # Get one fixed batch from each dataset for consistent tensorboard visualization across epochs
+    train_vis_sample, val_vis_sample, test_vis_sample = [
+        {k: v.cuda() for k, v in next(iter(loader)).items() if v is not None}
+        for loader in [train_dataloader, val_dataloader, test_dataloader]
+    ]
 
-        sampler_train.set_epoch(epoch)
-
-        if gpu == 0:
-            current_time = time.strftime('%y%m%d@%H:%M:%S')
-
-            list_lr = []
-            for g in optimizer.param_groups:
-                print(g['lr'])
-                list_lr.append(g['lr'])
-
-            print('=== Epoch {:5d} / {:5d} | Lr : {} | {} | {} ==='.format(epoch, args.epochs, list_lr, current_time, args.save_dir))
-
-        num_sample = len(loader_train) * loader_train.batch_size * args.num_gpus
-
-        if gpu == 0:
-            pbar = tqdm(total=num_sample)
-            log_cnt = 0.0
-            log_loss = 0.0
-
-        for batch, sample in enumerate(loader_train):
-            sample = {key: val.cuda(gpu) for key, val in sample.items() if val is not None}
-
-            if epoch == 1 and args.warm_up:
+    for epoch in range(1, conf['epochs']+1):
+        ##############################
+        #          TRAINING          #
+        ##############################
+        model.train()
+        epoch_loss_sum = {k: 0.0 for k in loss_names}
+        epoch_metrics_sum = {name: 0.0 for name in metrics.metric_name}
+        for batch, sample in enumerate(tqdm(train_dataloader, desc='Training')):
+            sample = {key: val.cuda() for key, val in sample.items() if val is not None}
+            
+            if epoch == 1 and conf['warm_up']:
                 warm_up_cnt += 1
-
                 for param_group in optimizer.param_groups:
-                    lr_warm_up = param_group['initial_lr'] * warm_up_cnt / warm_up_max_cnt
-                    param_group['lr'] = lr_warm_up
-
+                    param_group['lr'] = param_group['initial_lr'] * warm_up_cnt / warm_up_max_cnt
+            
             optimizer.zero_grad()
-            output = net(sample)
+            output = model(sample)
+            train_loss, train_loss_dict = compute_depth_loss(sample, output, conf)
+      
+            # Divide all losses by batch size
+            train_loss = train_loss / train_dataloader.batch_size
+            train_loss_dict = {k: v / train_dataloader.batch_size for k, v in train_loss_dict.items()}
 
-            loss_sum, loss_val = loss(sample, output)
-
-            # Divide by batch size
-            loss_sum = loss_sum / loader_train.batch_size
-            loss_val = loss_val / loader_train.batch_size
-
-            with amp.scale_loss(loss_sum, optimizer) as scaled_loss:
-                scaled_loss.backward()
-
+            train_loss.backward()
             optimizer.step()
 
-            if gpu == 0:
-                metric_val = metric.evaluate(sample, output, 'train')
-                writer_train.add(loss_val, metric_val)
+            metrics_train = metrics.evaluate(sample, output).squeeze().cpu().numpy()
+            
+            # Accumulate losses and metrics for epoch average
+            for key, value in train_loss_dict.items():
+                epoch_loss_sum[key] += value
+            
+            for name, value in zip(metrics.metric_name, metrics_train):
+                epoch_metrics_sum[name] += value
+            
+        # Log epoch averages to TensorBoard
+        num_train_batches = len(train_dataloader)
+        for loss_name, loss_sum in epoch_loss_sum.items():
+            writer.add_scalar(f'Train/Loss/{loss_name}', loss_sum / num_train_batches, epoch)
+        
+        for metric_name, metric_sum in epoch_metrics_sum.items():
+            writer.add_scalar(f'Train/Metrics/{metric_name}', metric_sum / num_train_batches, epoch)
+      
+        # Log current learning rate
+        writer.add_scalar('Learning_Rate', optimizer.param_groups[0]['lr'], epoch)
 
-                log_cnt += 1
-                log_loss += loss_sum.item()
+        # Visualize training samples
+        with torch.no_grad():
+            train_vis_output = model(train_vis_sample)
+        visualize_batch_to_tensorboard(writer, train_vis_sample, train_vis_output, epoch, 'Train', conf)
 
-                current_time = time.strftime('%y%m%d@%H:%M:%S')
-                error_str = '{:<10s}| {} | Loss = {:.4f}'.format('Train', current_time, log_loss / log_cnt)
+        if conf['save_full_model'] or epoch == conf['epochs']:
+            state = {'net': model.state_dict(), 'optimizer': optimizer.state_dict(), 'scheduler': scheduler.state_dict(), 'conf': conf}
+        else:
+            state = {'net': model.state_dict(), 'conf': conf}
+        torch.save(state, '{}/model_{:05d}.pt'.format(logdir, epoch))
 
-                if epoch == 1 and args.warm_up:
-                    list_lr = []
-                    for g in optimizer.param_groups:
-                        list_lr.append(round(g['lr'], 6))
-                    error_str = '{} | Lr Warm Up : {}'.format(error_str, list_lr)
-
-                pbar.set_description(error_str)
-                pbar.update(loader_train.batch_size * args.num_gpus)
-
-        if gpu == 0:
-            pbar.close()
-
-            writer_train.update(epoch, sample, output)
-
-            if args.save_full or epoch == args.epochs:
-                state = {'net': net.module.state_dict(), 'optimizer': optimizer.state_dict(), 'scheduler': scheduler.state_dict(), 'amp': amp.state_dict(), 'args': args}
-            else:
-                state = {'net': net.module.state_dict(), 'args': args}
-
-            torch.save(state, '{}/model_{:05d}.pt'.format(args.save_dir, epoch))
-
-        # Val
+        ##############################
+        #          VALIDATION        #
+        ##############################
         torch.set_grad_enabled(False)
-        net.eval()
-
-        num_sample = len(loader_val) * loader_val.batch_size * args.num_gpus
-
-        if gpu == 0:
-            pbar = tqdm(total=num_sample)
-            log_cnt = 0.0
-            log_loss = 0.0
-
-        for batch, sample in enumerate(loader_val):
-            sample = {key: val.cuda(gpu) for key, val in sample.items() if val is not None}
-
-            output = net(sample)
-
-            loss_sum, loss_val = loss(sample, output)
+        model.eval()
+        val_loss_sum = {k: 0.0 for k in loss_names}
+        val_metrics_sum = {name: 0.0 for name in metrics.metric_name}
+        for batch, sample in enumerate(tqdm(val_dataloader, desc='Validation')):
+            sample = {key: val.cuda() for key, val in sample.items() if val is not None}
+            output = model(sample)
+            val_loss, val_loss_dict = compute_depth_loss(sample, output, conf)
 
             # Divide by batch size
-            loss_sum = loss_sum / loader_val.batch_size
-            loss_val = loss_val / loader_val.batch_size
+            val_loss = val_loss / val_dataloader.batch_size
+            val_loss_dict = {k: v / val_dataloader.batch_size for k, v in val_loss_dict.items()}
 
-            if gpu == 0:
-                metric_val = metric.evaluate(sample, output, 'train')
-                writer_val.add(loss_val, metric_val)
+            metrics_val = metrics.evaluate(sample, output).squeeze().cpu().numpy()
 
-                log_cnt += 1
-                log_loss += loss_sum.item()
+            # Accumulate losses and metrics for epoch average
+            for key, value in val_loss_dict.items():
+                val_loss_sum[key] += value
+            
+            for name, value in zip(metrics.metric_name, metrics_val):
+                val_metrics_sum[name] += value
 
-                current_time = time.strftime('%y%m%d@%H:%M:%S')
-                error_str = '{:<10s}| {} | Loss = {:.4f}'.format('Val', current_time, log_loss / log_cnt)
-                pbar.set_description(error_str)
-                pbar.update(loader_val.batch_size * args.num_gpus)
+        # Log epoch averages to TensorBoard
+        num_val_batches = len(val_dataloader)
+        for loss_name, loss_sum in val_loss_sum.items():
+            writer.add_scalar(f'Val/Loss/{loss_name}', loss_sum / num_val_batches, epoch)
 
-        if gpu == 0:
-            pbar.close()
+        for metric_name, metric_sum in val_metrics_sum.items():
+            writer.add_scalar(f'Val/Metrics/{metric_name}', metric_sum / num_val_batches, epoch)
 
-            writer_val.update(epoch, sample, output)
-            print('')
+        # Visualize validation samples
+        val_vis_output = model(val_vis_sample)
+        visualize_batch_to_tensorboard(writer, val_vis_sample, val_vis_output, epoch, 'Val', conf)
 
-            writer_val.save(epoch, batch, sample, output)
-
-
-        ### inline test
-
-        num_sample = len(loader_test) * loader_test.batch_size * args.num_gpus
-
-        if gpu == 0:
-            pbar = tqdm(total=num_sample)
-            log_cnt = 0.0
-            log_loss = 0.0
-
-        for batch, sample in enumerate(loader_test):
-            sample = {key: test.cuda(gpu) for key, test in sample.items() if test is not None}
-
-            output = net(sample)
-
-            loss_sum, loss_test = loss(sample, output)
+        ##############################
+        #          TESTING           #
+        ##############################
+        test_loss_sum = {k: 0.0 for k in loss_names}
+        test_metrics_sum = {name: 0.0 for name in metrics.metric_name}
+        for batch, sample in enumerate(tqdm(test_dataloader, desc='Testing')):
+            sample = {key: test.cuda() for key, test in sample.items() if test is not None}
+            output = model(sample)
+            test_loss, test_loss_dict = compute_depth_loss(sample, output, conf)
 
             # Divide by batch size
-            loss_sum = loss_sum / loader_test.batch_size
-            loss_val = loss_test / loader_test.batch_size
+            test_loss = test_loss / test_dataloader.batch_size
+            test_loss_dict = {k: v / test_dataloader.batch_size for k, v in test_loss_dict.items()}
 
-            if gpu == 0:
-                metric_test = metric.evaluate(sample, output, 'train')
-                writer_test.add(loss_val, metric_test)
+            metrics_test = metrics.evaluate(sample, output).squeeze().cpu().numpy()
+            
+            # Accumulate losses and metrics for epoch average
+            for key, value in test_loss_dict.items():
+                test_loss_sum[key] += value
 
-                log_cnt += 1
-                log_loss += loss_sum.item()
+            for name, value in zip(metrics.metric_name, metrics_test):
+                test_metrics_sum[name] += value
 
-                current_time = time.strftime('%y%m%d@%H:%M:%S')
-                error_str = '{:<10s}| {} | Loss = {:.4f}'.format('test', current_time, log_loss / log_cnt)
-                pbar.set_description(error_str)
-                pbar.update(loader_test.batch_size * args.num_gpus)
+        # Log epoch averages to TensorBoard
+        num_test_batches = len(test_dataloader)
+        for loss_name, loss_sum in test_loss_sum.items():
+            writer.add_scalar(f'Test/Loss/{loss_name}', loss_sum / num_test_batches, epoch)
 
-        if gpu == 0:
-            pbar.close()
+        for metric_name, metric_sum in test_metrics_sum.items():
+            writer.add_scalar(f'Test/Metrics/{metric_name}', metric_sum / num_test_batches, epoch)
 
-            writer_test.update(epoch, sample, output)
-            print('')
-
-            writer_test.save(epoch, batch, sample, output)
-
+        # Visualize test samples
+        test_vis_output = model(test_vis_sample)
+        visualize_batch_to_tensorboard(writer, test_vis_sample, test_vis_output, epoch, 'Test', conf)
 
         torch.set_grad_enabled(True)
-
         scheduler.step()
 
+    print('Training completed. Model and logs are saved in {}'.format(logdir))
 
 if __name__ == '__main__':
     lt.monkey_patch()
