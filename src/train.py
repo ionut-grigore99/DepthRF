@@ -104,13 +104,13 @@ def visualize_batch_to_tensorboard(writer, sample, output, global_step, mode, co
 def train(conf):
     # Prepare dataset
     if conf['dataset'] == 'kitti':
-        train_dataset = KITTI(conf['kitti']['data_dir'], conf['kitti']['split_json'], use_aug=True, mode='train', num_sparse_points=conf['kitti']['num_sparse_points'], test_crop=False, top_crop=conf['kitti']['top_crop'], patch_height=conf['kitti']['patch_height'], patch_width=conf['kitti']['patch_width'])
-        val_dataset = KITTI(conf['kitti']['data_dir'], conf['kitti']['split_json'], use_aug=False, mode='val', num_sparse_points=conf['kitti']['num_sparse_points'], test_crop=False, top_crop=conf['kitti']['top_crop'], patch_height=conf['kitti']['patch_height'], patch_width=conf['kitti']['patch_width'])
-        test_dataset = KITTI(conf['kitti']['data_dir'], conf['kitti']['split_json'], use_aug=False, mode='test', num_sparse_points=0, test_crop=conf['kitti']['test_crop'], top_crop=conf['kitti']['top_crop'], patch_height=conf['kitti']['patch_height'], patch_width=conf['kitti']['patch_width'])
+        train_dataset = KITTI(conf['kitti']['data_dir'], conf['kitti']['split_json'], use_aug=True, mode='train', test_crop=False, top_crop=conf['kitti']['top_crop'], height=conf['kitti']['height'], width=conf['kitti']['width'])
+        val_dataset = KITTI(conf['kitti']['data_dir'], conf['kitti']['split_json'], use_aug=False, mode='val', test_crop=False, top_crop=conf['kitti']['top_crop'], height=conf['kitti']['height'], width=conf['kitti']['width'])
+        test_dataset = KITTI(conf['kitti']['data_dir'], conf['kitti']['split_json'], use_aug=False, mode='test', test_crop=conf['kitti']['test_crop'], top_crop=conf['kitti']['top_crop'], height=conf['kitti']['height'], width=conf['kitti']['width'])
     elif conf['dataset'] == 'nyu':
-        train_dataset = NYU(conf['nyu']['data_dir'], conf['nyu']['split_json'], use_aug=True, mode='train', num_sparse_points=conf['nyu']['num_sparse_points'])
-        val_dataset = NYU(conf['nyu']['data_dir'], conf['nyu']['split_json'], use_aug=False, mode='val', num_sparse_points=conf['nyu']['num_sparse_points'])
-        test_dataset = NYU(conf['nyu']['data_dir'], conf['nyu']['split_json'], use_aug=False, mode='test', num_sparse_points=0)
+        train_dataset = NYU(conf['nyu']['data_dir'], conf['nyu']['split_json'], use_aug=True, mode='train', num_sparse_points=conf['nyu']['num_sparse_points'], height=conf['nyu']['height'], width=conf['nyu']['width'], center_crop_size=conf['nyu']['center_crop_size'])
+        val_dataset = NYU(conf['nyu']['data_dir'], conf['nyu']['split_json'], use_aug=False, mode='val', num_sparse_points=conf['nyu']['num_sparse_points'], height=conf['nyu']['height'], width=conf['nyu']['width'], center_crop_size=conf['nyu']['center_crop_size'])
+        test_dataset = NYU(conf['nyu']['data_dir'], conf['nyu']['split_json'], use_aug=False, mode='test', num_sparse_points=0, height=conf['nyu']['height'], width=conf['nyu']['width'], center_crop_size=conf['nyu']['center_crop_size'])
     else:
         raise ValueError(f"Unknown dataset: {conf['dataset']}")
     train_dataloader = DataLoader(dataset=train_dataset, batch_size=conf['batch_size'], shuffle=True, num_workers=conf['num_workers'], pin_memory=True, drop_last=True)
@@ -182,14 +182,14 @@ def train(conf):
         for loader in [train_dataloader, val_dataloader, test_dataloader]
     ]
 
-    for epoch in range(1, conf['epochs']+1):
+    for epoch in tqdm(range(1, conf['epochs']+1), desc='Epochs', position=0):
         ##############################
         #          TRAINING          #
         ##############################
         model.train()
         epoch_loss_sum = {k: 0.0 for k in loss_names}
         epoch_metrics_sum = {name: 0.0 for name in metrics.metric_name}
-        for batch, sample in enumerate(tqdm(train_dataloader, desc='Training')):
+        for batch, sample in enumerate(tqdm(train_dataloader, desc='Training', position=1, leave=False)):
             sample = {key: val.cuda() for key, val in sample.items() if val is not None}
             
             if epoch == 1 and conf['warm_up']:
@@ -246,7 +246,7 @@ def train(conf):
         model.eval()
         val_loss_sum = {k: 0.0 for k in loss_names}
         val_metrics_sum = {name: 0.0 for name in metrics.metric_name}
-        for batch, sample in enumerate(tqdm(val_dataloader, desc='Validation')):
+        for batch, sample in enumerate(tqdm(val_dataloader, desc='Validation', position=1, leave=False)):
             sample = {key: val.cuda() for key, val in sample.items() if val is not None}
             output = model(sample)
             val_loss, val_loss_dict = compute_depth_loss(sample, output, conf)
@@ -281,7 +281,7 @@ def train(conf):
         ##############################
         test_loss_sum = {k: 0.0 for k in loss_names}
         test_metrics_sum = {name: 0.0 for name in metrics.metric_name}
-        for batch, sample in enumerate(tqdm(test_dataloader, desc='Testing')):
+        for batch, sample in enumerate(tqdm(test_dataloader, desc='Testing', position=1, leave=False)):
             sample = {key: test.cuda() for key, test in sample.items() if test is not None}
             output = model(sample)
             test_loss, test_loss_dict = compute_depth_loss(sample, output, conf)

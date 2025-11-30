@@ -45,10 +45,8 @@ def save_sample_results(sample, output, save_dir, idx, conf):
         # Extract and move to CPU
         rgb = sample['rgb'].detach().clone()
         depth_sparse = sample['depth_sparse'].detach()[0, 0].cpu().numpy()
-        pred_init = output['pred_init'].detach()[0, 0].cpu().numpy()
         pred = output['pred'].detach()[0, 0].cpu().numpy()
         depth_gt = sample['depth_gt'].detach()[0, 0].cpu().numpy()
-        depth_filled = sample['depth_filled'].detach()[0, 0].cpu().numpy()
         
         # Process RGB
         rgb.mul_(img_std.type_as(rgb)).add_(img_mean.type_as(rgb)) # Un-normalize RGB
@@ -59,14 +57,11 @@ def save_sample_results(sample, output, save_dir, idx, conf):
         # Normalize depth maps to [0, 1]
         max_depth = conf['max_depth']
         depth_sparse = np.clip(depth_sparse, 0, max_depth) / max_depth
-        depth_filled = np.clip(depth_filled, 0, max_depth) / max_depth
         pred = np.clip(pred, 0, max_depth) / max_depth
         depth_gt = np.clip(depth_gt, 0, max_depth) / max_depth
         
         # Apply colormap to depth maps
         depth_sparse_colored = (255.0 * cm(depth_sparse)).astype('uint8')[:, :, :3]
-        depth_filled_colored = (255.0 * cm(depth_filled)).astype('uint8')[:, :, :3]
-        pred_init_colored = (255.0 * cm(pred_init)).astype('uint8')[:, :, :3]
         pred_colored = (255.0 * cm(pred)).astype('uint8')[:, :, :3]
         depth_gt_colored = (255.0 * cm(depth_gt)).astype('uint8')[:, :, :3]
 
@@ -76,8 +71,6 @@ def save_sample_results(sample, output, save_dir, idx, conf):
         # Convert to PIL Images
         rgb_img = Image.fromarray(rgb, 'RGB')
         depth_sparse_img = Image.fromarray(depth_sparse_colored, 'RGB')
-        depth_filled_img = Image.fromarray(depth_filled_colored, 'RGB')
-        pred_init_img = Image.fromarray(pred_init_colored, 'RGB')
         pred_img = Image.fromarray(pred_colored, 'RGB')
         pred_gray_img = Image.fromarray(pred_gray, 'L')
         depth_gt_img = Image.fromarray(depth_gt_colored, 'RGB')
@@ -85,11 +78,9 @@ def save_sample_results(sample, output, save_dir, idx, conf):
         # Save visualization images
         rgb_img.save(os.path.join(sample_dir, '01_rgb.png'))
         depth_sparse_img.save(os.path.join(sample_dir, '02_depth_sparse.png'))
-        depth_filled_img.save(os.path.join(sample_dir, '02_depth_filled.png'))
-        pred_init_img.save(os.path.join(sample_dir, '03_pred_init.png'))
-        pred_img.save(os.path.join(sample_dir, '05_pred_final.png'))
-        pred_gray_img.save(os.path.join(sample_dir, '05_pred_final_gray.png'))
-        depth_gt_img.save(os.path.join(sample_dir, '06_gt.png'))
+        pred_img.save(os.path.join(sample_dir, '03_pred_final.png'))
+        pred_gray_img.save(os.path.join(sample_dir, '04_pred_final_gray.png'))
+        depth_gt_img.save(os.path.join(sample_dir, '05_depth_gt.png'))
 
 
 def inference(conf):
@@ -101,9 +92,9 @@ def inference(conf):
 
     # Prepare dataset
     if conf['dataset'] == 'kitti':
-        test_dataset = KITTI(data_dir=conf['kitti']['data_dir'], split_json=conf['kitti']['split_json'], use_aug=False, mode='test', num_sparse_points=conf['kitti']['num_sparse_points'], test_crop=conf['kitti']['test_crop'], top_crop=conf['kitti']['top_crop'], patch_height=conf['kitti']['patch_height'], patch_width=conf['kitti']['patch_width'])
+        test_dataset = KITTI(data_dir=conf['kitti']['data_dir'], split_json=conf['kitti']['split_json'], use_aug=False, mode='test', test_crop=conf['kitti']['test_crop'], top_crop=conf['kitti']['top_crop'], height=conf['kitti']['height'], width=conf['kitti']['width'])
     elif conf['dataset'] == 'nyu':
-        test_dataset = NYU(data_dir=conf['nyu']['data_dir'], split_json=conf['nyu']['split_json'], use_aug=False, mode='test', num_sparse_points=conf['nyu']['num_sparse_points'], height=conf['nyu']['height'], width=conf['nyu']['width'], crop_size=conf['nyu']['crop_size'])
+        test_dataset = NYU(data_dir=conf['nyu']['data_dir'], split_json=conf['nyu']['split_json'], use_aug=False, mode='test', num_sparse_points=conf['nyu']['num_sparse_points'], height=conf['nyu']['height'], width=conf['nyu']['width'], center_crop_size=conf['nyu']['center_crop_size'])
     else:
         raise NotImplementedError
     test_dataloader = DataLoader(dataset=test_dataset, batch_size=1, shuffle=False, num_workers=conf['num_workers'])
@@ -184,6 +175,6 @@ if __name__ == '__main__':
     lt.monkey_patch()
 
     conf = Config().conf
-    conf['save_test_images'] = True # Ensure test images are saved
+    conf['save_test_images'] = False # Ensure test images are saved
 
     inference(conf)

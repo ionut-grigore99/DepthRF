@@ -3,26 +3,14 @@ import torch.nn as nn
 from torch.nn.init import xavier_uniform_, constant_, normal_
 
 from mmcv.cnn import ConvModule, xavier_init
-from mmcv.runner import BaseModule, auto_fp16
+from mmcv.runner import BaseModule
 from mmcv.cnn.bricks.transformer import build_positional_encoding
 from mmcv.ops.multi_scale_deform_attn import MultiScaleDeformableAttention
 
 from src.utils import resize
 
 class HAHIHeteroNeck(BaseModule):
-    """HAHI in `DepthFormer <https://arxiv.org/abs/2203.14211>`. For heterogeneous CNN- and Transformer- features.
-    Args:
-        in_channels (List[int]): Number of input channels per scale.
-        out_channels (int): Number of output channels.
-        embedding_dim (int): Feature dimension in HAHI.
-        positional_encoding (dict): position encoding used in attention modules
-        scales (List[float]): Scale factors for each input feature map. Default: [1, 1, 1, 1]
-        norm_cfg (dict): Config dict for normalization layer. Default: dict(type='BN', requires_grad=True).
-        act_cfg (dict): Config dict for activation layer in ConvModule. Default: dict(type='ReLU', inplace=True).
-        cross_att (bool): Whether to apply cross attention in HAHI. Default: True.
-        self_att (bool): Whether to apply self attention in HAHI. Default: True.
-        num_points (int): The number of reference points used in attention modules. Default: 8.
-    """
+    """HAHI in `DepthFormer <https://arxiv.org/abs/2203.14211>`. For heterogeneous CNN- and Transformer- features."""
 
     def __init__(self,
                  in_channels,
@@ -204,6 +192,6 @@ class HAHIHeteroNeck(BaseModule):
         return tuple(outs)
 
 if __name__ == '__main__':
-    #@TODO test
+    #@TODO test the functionality
     pass
     

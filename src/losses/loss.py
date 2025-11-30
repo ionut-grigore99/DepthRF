@@ -38,8 +38,8 @@ def compute_depth_loss(sample, output, conf):
     
     loss_dict = {}
     total_loss = 0.0
-    
-    # Parse loss configuration: "1.0*L1+1.0*L2+1.0*DDIM"
+
+    # Parse loss configuration: "1.0*L1+1.0*L2+1.0*DDIM" for example
     loss_config = conf['loss']
     
     for loss_item in loss_config.split('+'):

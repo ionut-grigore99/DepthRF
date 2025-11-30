@@ -37,13 +37,13 @@ import torchvision.transforms as T
 import matplotlib.pyplot as plt
 import torchvision.transforms.functional as TF
 
-from src.utils import ToNumpy, get_sparse_depth, simple_depth_completion
+from src.utils import ToNumpy, get_sparse_depth
 
 warnings.filterwarnings("ignore", category=UserWarning)
 
 
 class NYU(Dataset):
-    def __init__(self, data_dir, split_json, use_aug, mode, num_sparse_points, height, width, crop_size):
+    def __init__(self, data_dir, split_json, use_aug, mode, num_sparse_points, height, width, center_crop_size):
         super(NYU, self).__init__()
 
         self.data_dir = data_dir # Root directory of NYUDepthV2 dataset
@@ -53,18 +53,10 @@ class NYU(Dataset):
         self.num_sparse_points = num_sparse_points # Number of sparse depth points to sample from the dense depth map
         self.height = height # Height to resize images to
         self.width = width # Width to resize images to
-        self.crop_size = crop_size # Crop size for images
+        self.center_crop_size = center_crop_size # Center crop size for images
 
         if mode != 'train' and mode != 'val' and mode != 'test':
             raise NotImplementedError
-
-        # Camera intrinsics [fx, fy, cx, cy]
-        self.K = torch.Tensor([
-            5.1885790117450188e+02 / 2.0,
-            5.1946961112127485e+02 / 2.0,
-            3.2558244941119034e+02 / 2.0 - 8.0,
-            2.5373616633400465e+02 / 2.0 - 6.0
-        ])
 
         with open(split_json) as json_file:
             json_data = json.load(json_file)
@@ -99,37 +91,32 @@ class NYU(Dataset):
             t_rgb = T.Compose([
                 T.Resize(scale),
                 T.ColorJitter(brightness=0.4, contrast=0.4, saturation=0.4),
-                T.CenterCrop(self.crop_size),
+                T.CenterCrop(self.center_crop_size),
                 T.ToTensor(),
                 T.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225)), # ImageNet normalization values: https://stackoverflow.com/questions/58151507/why-pytorch-officially-use-mean-0-485-0-456-0-406-and-std-0-229-0-224-0-2
             ])
 
             t_depth = T.Compose([
                 T.Resize(scale),
-                T.CenterCrop(self.crop_size),
+                T.CenterCrop(self.center_crop_size),
                 ToNumpy(),
                 T.ToTensor()
             ])
 
             rgb = t_rgb(rgb)
             depth = t_depth(depth)
-
             depth = depth / _scale
-
-            K = self.K.clone()
-            K[0] = K[0] * _scale
-            K[1] = K[1] * _scale
         else: # for validation and test the augmentations are not applied, only transformations such as resizing, cropping and normalization
             t_rgb = T.Compose([
                 T.Resize(self.height),
-                T.CenterCrop(self.crop_size),
+                T.CenterCrop(self.center_crop_size),
                 T.ToTensor(),
                 T.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225)) # ImageNet normalization values: https://stackoverflow.com/questions/58151507/why-pytorch-officially-use-mean-0-485-0-456-0-406-and-std-0-229-0-224-0-2
             ])
 
             t_depth = T.Compose([
                 T.Resize(self.height),
-                T.CenterCrop(self.crop_size),
+                T.CenterCrop(self.center_crop_size),
                 ToNumpy(),
                 T.ToTensor()
             ])
@@ -137,22 +124,9 @@ class NYU(Dataset):
             rgb = t_rgb(rgb)
             depth = t_depth(depth)
 
-            K = self.K.clone()
+        depth_sparse = get_sparse_depth(depth, self.num_sparse_points)
 
-        if self.num_sparse_points > 0:
-            depth_sparse = get_sparse_depth(depth, self.num_sparse_points)
-        else:
-            depth_sparse = depth
-
-        # Create binary mask for valid depth pixels
-        valid_depth_mask = (depth_sparse > 0)
-
-        # Apply simple depth completion to fill gaps in sparse depth map
-        depth_filled = np.asarray(depth_sparse.squeeze(0), dtype=np.float32)  
-        depth_filled, _ = simple_depth_completion(depth_filled)
-        depth_filled = depth_filled[np.newaxis, ...]  
-
-        output = {'rgb': rgb, 'depth_sparse': depth_sparse, 'depth_gt': depth, 'K': K, 'valid_depth_mask': valid_depth_mask, 'depth_filled': depth_filled}
+        output = {'rgb': rgb, 'depth_sparse': depth_sparse, 'depth_gt': depth}
 
         return output
 
@@ -168,9 +142,9 @@ if __name__ == "__main__":
     num_sparse_points = 500
     height = 240
     width = 320
-    crop_size = (228, 304)
+    center_crop_size = (228, 304)
 
-    dataset = NYU(data_dir, split_json, use_aug, mode, num_sparse_points, height, width, crop_size)
+    dataset = NYU(data_dir, split_json, use_aug, mode, num_sparse_points, height, width, center_crop_size)
     dataloader = DataLoader(dataset, batch_size=4, shuffle=True, num_workers=0)
 
     for i, sample in enumerate(dataloader):
@@ -178,7 +152,6 @@ if __name__ == "__main__":
         print(f"  RGB shape: {sample['rgb'].shape}")
         print(f"  Sparse Depth shape: {sample['depth_sparse'].shape}")
         print(f"  Ground Truth Depth shape: {sample['depth_gt'].shape}")
-        print(f"  K shape: {sample['K'].shape}")
        
         # Create visualization for the first sample in the batch
         if i == 0:

@@ -114,9 +114,9 @@ nyudepthv2
         └── ...
 ```
 
-#### KITTI Depth Prediction (KITTI DP)
+#### KITTI Depth Prediction
 
-KITTI DP dataset is available at the [KITTI Website](http://www.cvlibs.net/datasets/kitti). We should choose depth prediction for re-implementation. 
+KITTI Depth Prediction dataset is available at the [KITTI Website](http://www.cvlibs.net/datasets/kitti). We should choose depth prediction. 
 
 For color images, KITTI Raw dataset (~180GB) from the [KITTI Raw Website](http://www.cvlibs.net/datasets/kitti/raw_data.php) is also needed. You can download it using our provided script:
 
@@ -125,7 +125,7 @@ For color images, KITTI Raw dataset (~180GB) from the [KITTI Raw Website](http:/
 $ bash src/data_prep/raw_data_downloader.sh /path/to/download/kitti_raw
 ```
 
-After downloading dataset, you should first copy color images, poses, and calibrations from the KITTI Raw to the KITTI Depth dataset.
+After downloading dataset, you should first copy color images, poses, and calibrations from the KITTI Raw to the KITTI Depth Prediction dataset.
 
 ```bash
 $ python -m src.data_prep.prepare_KITTI --path_root_dp PATH_TO_Dataset --path_root_raw PATH_TO_KITTI_RAW
