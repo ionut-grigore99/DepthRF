@@ -70,7 +70,7 @@ class DDIMDepthHead(BaseModule):
         """
         # Create noise to corrupt the clean depth latent. This noise will be what the model learns to predict
         random_noise = torch.randn(depth_latent_clean.shape).to(depth_latent_clean.device)
-
+      
         # Sample a random timestep for each sample in the batch (timestep controls noise level)
         random_timesteps = torch.randint(low=0, high=self.scheduler.num_train_timesteps, size=(depth_latent_clean.shape[0],), device=depth_latent_clean.device).long()
 
